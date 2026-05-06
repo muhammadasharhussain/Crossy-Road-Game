@@ -1,18 +1,22 @@
 #include <SFML/Graphics.hpp>
 #include <optional>
 #include <vector>
-#include "lane.h"
+#include <cstdlib>
+#include <ctime>
+#include "../include/lane.h"
+#include "../include/vehicle.h"
 using namespace std;
 using namespace sf;
-    
+
 int main() {
     const float TILE = 50.f;
     const float width = 550.f;
     const float height = 750.f;
     const float PLAYER_SIZE = 50.f;
 
-    RenderWindow window(VideoMode({(unsigned int)width,(unsigned int)height}), "Crossy Road");
+    srand(static_cast<unsigned>(time(nullptr)));
 
+    RenderWindow window(VideoMode({(unsigned int)width, (unsigned int)height}), "Crossy Road");
 
     vector<Lane> lanes;
     vector<Lane::Type> pattern = {
@@ -32,15 +36,45 @@ int main() {
     RectangleShape player({PLAYER_SIZE, PLAYER_SIZE});
     player.setFillColor(Color::Blue);
     player.setPosition({(width / 2) - (PLAYER_SIZE / 2), height - TILE});
-    
-    while (window.isOpen()) {
 
+    Clock clock;
+    vector<Vehicle> vehicles;
+
+    int roadIndex = 0;
+    for (int i = 0; i < (int)lanes.size(); i++) {
+        if (lanes[i].getLaneType() == Lane::ROAD) {
+            float y = height - (i + 1) * TILE;
+            float dir = (rand() % 2 == 0) ? 1.f : -1.f;
+            float speed = (100.f + rand() % 50) * dir;
+
+            // one size per lane, cycling SMALL -> MEDIUM -> LARGE
+            Vehicle::Size size;
+            if      (roadIndex % 3 == 0) size = Vehicle::SMALL;
+            else if (roadIndex % 3 == 1) size = Vehicle::MEDIUM;
+            else                         size = Vehicle::LARGE;
+
+            // spacing based on size so they don't overlap
+            float vehicleWidth = (size == Vehicle::SMALL)  ? TILE * 1.2f :
+                                 (size == Vehicle::MEDIUM) ? TILE * 2.0f :
+                                                             TILE * 3.0f;
+            float gap = 100.f;
+            float spacing = vehicleWidth + gap;
+
+            int count = (int)(width / (spacing+50)); // fit as many as possible
+            for (int j = 0; j < count; j++)
+                vehicles.push_back(Vehicle(j * spacing, y, speed, TILE, size));
+
+            roadIndex++;
+        }
+    }
+
+    while (window.isOpen()) {
         while (const std::optional event = window.pollEvent()) {
             if (event->is<Event::Closed>())
                 window.close();
 
-        if (const auto* keyEvent = event->getIf<Event::KeyPressed>()) {
-               Vector2f pos = player.getPosition();
+            if (const auto* keyEvent = event->getIf<Event::KeyPressed>()) {
+                Vector2f pos = player.getPosition();
                 switch (keyEvent->code) {
                     case Keyboard::Key::Up:
                         if (pos.y - TILE >= 0)
@@ -61,12 +95,19 @@ int main() {
                     default: break;
                 }
             }
-        }      
+        }
+
+        float dt = clock.restart().asSeconds();
+        for (auto& v : vehicles)
+            v.update(dt, width);
+
         window.clear(Color(100, 200, 100));
         for (auto& lane : lanes)
             lane.draw(window);
-
+        for (auto& v : vehicles)
+            v.draw(window);
         window.draw(player);
+
         window.display();
     }
     return 0;
