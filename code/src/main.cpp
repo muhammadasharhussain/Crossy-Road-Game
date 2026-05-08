@@ -35,7 +35,7 @@ int main() {
         worldGen.update(height / 2.f - i * TILE, lanes, obstacles);
 
     Font font;
-    if (!font.openFromFile("C:\\Users\\Hp EliteBook 840 G5\\Documents\\OOP\\CCP\\code\\assets\\fonts\\pixelpurl.ttf"))
+    if (!font.openFromFile("C:\\Users\\Hp EliteBook 840 G5\\Documents\\OOP\\CCP\\code\\assets\\fonts\\pixelpurl.ttf")) //hardcode the fond file address from your pc
         return -1;  // make sure font file exists
         
     Text scoreText(font);
