@@ -23,7 +23,7 @@ int main() {
     // player
     RectangleShape player({PLAYER_SIZE, PLAYER_SIZE});
     player.setFillColor(Color::Blue);
-    player.setPosition(sf::Vector2f({(width / 2) - (PLAYER_SIZE / 2), (height - TILE)-250.f}));
+    player.setPosition(sf::Vector2f((width / 2) - (PLAYER_SIZE / 2), (height - TILE)-250.f));
 
     Clock clock;
 
@@ -33,6 +33,18 @@ int main() {
 
     for (int i = 0; i < 20; i++)
         worldGen.update(height / 2.f - i * TILE, lanes, obstacles);
+
+    Font font;
+    if (!font.openFromFile("C:\\Users\\Hp EliteBook 840 G5\\Documents\\OOP\\CCP\\code\\assets\\fonts\\pixelpurl.ttf"))
+        return -1;  // make sure font file exists
+        
+    Text scoreText(font);
+    scoreText.setCharacterSize(50);
+    scoreText.setFillColor(sf::Color::White);
+    scoreText.setPosition(sf::Vector2f(10.f, 10.f));
+        
+    int score = 0;
+    float highestY = player.getPosition().y;  // track how far up player has gone
 
     while (window.isOpen()) {
         float dt = clock.restart().asSeconds();
@@ -45,7 +57,7 @@ int main() {
         if (playerY < cameraY - height / 4.f)
             cameraY = playerY + height / 4.f;
 
-        camera.setCenter({width / 2.f, cameraY});
+        camera.setCenter(sf::Vector2f(width / 2.f, cameraY));
         window.setView(camera);
 
         worldGen.update(cameraY, lanes, obstacles);
@@ -76,6 +88,14 @@ int main() {
                     }
                 }
         }
+        // score increases as player moves up
+    float currentY = player.getPosition().y;
+    if (currentY < highestY) {
+        score ++;
+        highestY = currentY;
+    }
+
+    scoreText.setString(to_string(score));
 
     for (auto* obs : obstacles)
         obs->update(dt);
@@ -96,7 +116,9 @@ int main() {
     window.draw(player);
 
     window.setView(window.getDefaultView()); // reset for HUD later
+    window.draw(scoreText);
     window.display();
+
     }
     for (auto* obs : obstacles)
         delete obs;
