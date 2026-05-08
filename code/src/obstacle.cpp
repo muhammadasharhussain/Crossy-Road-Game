@@ -4,7 +4,7 @@
 Obstacle::Obstacle(float x, float y, float w, float h, Color color, float speed, int dir) {
     this->speed = speed;
     direction = dir;
-    shape.setSize({w, h});
+    shape.setSize({w, h-5.0f}); // slight padding to prevent perfect edge collisions
     shape.setPosition(sf::Vector2f({x, y}));
     shape.setFillColor(color);
 }
@@ -20,4 +20,8 @@ bool Obstacle::isOffScreen() {
 
 float Obstacle::getSpeedX() {
     return speed * direction;
+}
+
+void Obstacle::setPosition(float x, float y) {
+    shape.setPosition(sf::Vector2f(x, y));
 }
