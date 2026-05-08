@@ -38,3 +38,22 @@ void Vehicle::update(float dt) {
 void Vehicle::draw(RenderWindow& window) {
     window.draw(shape);
 }
+
+Log::Log(float x, float y, float speed, int direction, float windowWidth)
+    : Obstacle(x, y, TILE * 2.5f, TILE * 0.7f, sf::Color(139, 90, 43), speed, direction),
+      windowWidth(windowWidth)
+{}
+
+void Log::update(float dt) {
+    shape.move(sf::Vector2f(speed * direction * dt, 0.f));
+
+    float x = shape.getPosition().x;
+    if (direction == 1 && x > windowWidth + 10.f)
+        shape.setPosition(sf::Vector2f(-shape.getSize().x, shape.getPosition().y));
+    else if (direction == -1 && x < -shape.getSize().x - 10.f)
+        shape.setPosition(sf::Vector2f(windowWidth + 10.f, shape.getPosition().y));
+}
+
+void Log::draw(sf::RenderWindow& window) {
+    window.draw(shape);
+}
