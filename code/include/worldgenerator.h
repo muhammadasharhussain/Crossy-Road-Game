@@ -32,4 +32,5 @@ private:
     Lane::Type pickLaneType();
     void spawnStaticObstacles(std::vector<Obstacle*>& obstacles, float laneY);
     void spawnVehicles(std::vector<Obstacle*>& obstacles, float laneY);
+    void spawnLogs(std::vector<Obstacle*>& obstacles, float laneY);
 };
