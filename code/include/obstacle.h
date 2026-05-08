@@ -8,7 +8,9 @@ public:
 
     virtual void update(float dt) = 0;       // pure virtual
     virtual void draw(RenderWindow& window) = 0; // pure virtual
+    virtual Obstacle* clone() const = 0; 
 
+    void setPosition(float x, float y);
     FloatRect getBounds();
     bool isOffScreen();
     float getSpeedX();
