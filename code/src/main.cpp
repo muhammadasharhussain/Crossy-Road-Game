@@ -35,7 +35,7 @@ int main() {
         worldGen.update(height / 2.f - i * TILE, lanes, obstacles);
 
     Font font;
-    if (!font.openFromFile("C:\\Users\\Hp EliteBook 840 G5\\Documents\\OOP\\CCP\\code\\assets\\fonts\\pixelpurl.ttf")) //hardcode the fond file address from your pc
+    if (!font.openFromFile("C:\\Users\\Hp EliteBook 840 G5\\Documents\\OOP\\CCP\\code\\assets\\fonts\\pixelpurl.ttf"))
         return -1;  // make sure font file exists
         
     Text scoreText(font);
@@ -45,6 +45,27 @@ int main() {
         
     int score = 0;
     float highestY = player.getPosition().y;  // track how far up player has gone
+
+    // before game loop — add game state
+    enum class GameState { PLAYING, DEAD };
+    GameState state = GameState::PLAYING;
+
+    // death screen text
+    Text deathText(font);
+    deathText.setCharacterSize(48);
+    deathText.setFillColor(sf::Color::Red);
+    deathText.setString("GAME OVER");
+    deathText.setPosition(sf::Vector2f(
+        width / 2.f - deathText.getGlobalBounds().size.x / 2.f, 
+        height / 2.f - 60.f));
+
+    Text restartText(font);
+    restartText.setCharacterSize(24);
+    restartText.setFillColor(sf::Color::White);
+    restartText.setString("Press R to restart");
+    restartText.setPosition(sf::Vector2f(
+        width / 2.f - restartText.getGlobalBounds().size.x / 2.f,
+        height / 2.f + 10.f));
 
     while (window.isOpen()) {
         float dt = clock.restart().asSeconds();
@@ -67,26 +88,60 @@ int main() {
                 window.close();
 
                 if (const auto* keyEvent = event->getIf<Event::KeyPressed>()) {
+                    if (state == GameState::PLAYING){
                     Vector2f pos = player.getPosition();
                     float topEdge    = cameraY - height / 2.f;
                     float bottomEdge = cameraY + height / 2.f;
             
                     switch (keyEvent->code) {
                         case Keyboard::Key::Up:
-                            if (pos.y - TILE >= topEdge)
-                                player.move({0.f, -TILE}); break;
+                            if (pos.y - TILE >= topEdge){
+                                sf::Vector2f move(0.f, -TILE);  // example for Up
+                                if (!Collision::checkStaticBlocking(player, move, obstacles))
+                                    player.move(move); break;
+                            }
                         case Keyboard::Key::Down:
-                            if (pos.y + PLAYER_SIZE <= bottomEdge)
-                                player.move({0.f, TILE}); break;
+                            if (pos.y + PLAYER_SIZE <= bottomEdge){
+                                sf::Vector2f move(0.f, TILE);  // example for Down
+                                if (!Collision::checkStaticBlocking(player, move, obstacles))
+                                    player.move(move); break;
+                            }
                         case Keyboard::Key::Left:
-                            if (pos.x - TILE >= 0)
-                                player.move({-TILE, 0.f}); break;
+                            if (pos.x - TILE >= 0){
+                                sf::Vector2f move(-TILE, 0.f);  // example for Left
+                                if (!Collision::checkStaticBlocking(player, move, obstacles))
+                                    player.move(move); break;
+                            }
                         case Keyboard::Key::Right:
-                            if (pos.x + TILE + PLAYER_SIZE <= width)
-                                player.move({TILE, 0.f}); break;
+                            if (pos.x + TILE + PLAYER_SIZE <= width){
+                                sf::Vector2f move(TILE, 0.f);  // example for Right
+                                if (!Collision::checkStaticBlocking(player, move, obstacles))
+                                    player.move(move); break;
+                            }
                         default: break;
                     }
                 }
+
+                if (state == GameState::DEAD) {
+                    if (keyEvent->code == Keyboard::Key::R) {
+                        // reset everything
+                        state = GameState::PLAYING;
+                        score = 0;
+                        lanes.clear();
+                        for (auto* o : obstacles) delete o;
+                        obstacles.clear();
+                        player.setPosition(sf::Vector2f(
+                            (width / 2) - (PLAYER_SIZE / 2), height - TILE - 250.f));
+                        cameraY = height / 2.f;
+                        highestY = player.getPosition().y;
+                        worldGen = WorldGenerator(width, height);
+                        for (int i = 0; i < 20; i++)
+                            worldGen.update(height / 2.f - i * TILE, lanes, obstacles);
+                    }
+                }
+            
+            
+            }
         }
         // score increases as player moves up
     float currentY = player.getPosition().y;
@@ -97,13 +152,24 @@ int main() {
 
     scoreText.setString(to_string(score));
 
-    for (auto* obs : obstacles)
-        obs->update(dt);
-
-    if (Collision::checkPlayerObstacle(player, obstacles))
-        player.setFillColor(Color::Red);
-    else
-        player.setFillColor(Color::Blue);
+    if (state == GameState::PLAYING) {
+        // update obstacles
+        for (auto* obs : obstacles)
+            obs->update(dt);
+    
+        // log riding — move player with log
+        Log* log = Collision::getLogUnderPlayer(player, obstacles);
+        if (log != nullptr)
+            player.move(sf::Vector2f(log->getSpeedX() * dt, 0.f));
+    
+        // death checks
+        if (Collision::checkVehicleHit(player, obstacles) ||
+            Collision::checkDrowning(player, lanes, obstacles)) {
+            state = GameState::DEAD;
+        }
+    
+        player.setFillColor(sf::Color::Blue);
+    }
 
     window.clear(Color::Green);
 
@@ -115,9 +181,20 @@ int main() {
 
     window.draw(player);
 
-    window.setView(window.getDefaultView()); // reset for HUD later
-    window.draw(scoreText);
-    window.display();
+    // drawing
+window.setView(window.getDefaultView());
+window.draw(scoreText);
+
+if (state == GameState::DEAD) {
+    // dark overlay
+    sf::RectangleShape overlay(sf::Vector2f(width, height));
+    overlay.setFillColor(sf::Color(0, 0, 0, 160));
+    window.draw(overlay);
+    window.draw(deathText);
+    window.draw(restartText);
+}
+
+window.display();
 
     }
     for (auto* obs : obstacles)
