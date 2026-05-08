@@ -14,6 +14,7 @@ public:
     FloatRect getBounds();
     bool isOffScreen();
     float getSpeedX();
+    void setSpeed(float s) { speed = s; }
 
 protected:
     RectangleShape shape;
