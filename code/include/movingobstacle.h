@@ -21,3 +21,15 @@ private:
     static sf::Color colorFor(VehicleType t);
     static sf::Vector2f sizeFor(VehicleType t);
 };
+
+class Log : public Obstacle {
+    public:
+        Log(float x, float y, float speed, int direction, float windowWidth);
+        void update(float dt) override;
+        void draw(RenderWindow& window) override;
+        Obstacle* clone() const override { return new Log(*this); }
+        void setDirection(int d) { direction = d; }
+    
+    private:
+        float windowWidth;
+};
