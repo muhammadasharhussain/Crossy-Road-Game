@@ -1,4 +1,4 @@
-#include "Lane.h"
+#include "lane.h"
 
 Lane::Lane(float x, float y, float width, float tileSize, Type t) {
     laneType = t;
@@ -11,6 +11,10 @@ Lane::Lane(float x, float y, float width, float tileSize, Type t) {
         shape.setFillColor(Color(80, 80, 80));
     else if (t == RIVER)
         shape.setFillColor(Color(30, 100, 200));
+}
+
+float Lane::getY() const {
+    return shape.getPosition().y;
 }
 
 void Lane::draw(RenderWindow& window) {
