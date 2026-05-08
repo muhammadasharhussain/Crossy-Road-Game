@@ -21,6 +21,6 @@ void Lane::draw(RenderWindow& window) {
     window.draw(shape);
 }
 
-Lane::Type Lane::getLaneType() {
+Lane::Type Lane::getLaneType() const {
     return laneType;
 }
