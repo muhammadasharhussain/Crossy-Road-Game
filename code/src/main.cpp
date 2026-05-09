@@ -1,9 +1,6 @@
 #include <SFML/Graphics.hpp>
-#include <SFML/Audio.hpp>
 #include <optional>
 #include <vector>
-#include <string>
-// Custom Headers
 #include "lane.h"
 #include "obstacle.h"
 #include "staticobstacle.h"
@@ -11,96 +8,124 @@
 #include "collision.h"
 #include "constants.h"
 #include "worldgenerator.h"
-#include "audio.h" 
+#include "scoreboard.h"
+#include "audio.h"
 
 using namespace std;
 using namespace sf;
 
 int main() {
-    // ---------------------------------------------------------
-    // 1. INITIALIZATION & WINDOW SETUP
-    // ---------------------------------------------------------
+    // --- INITIALIZATION ---
     RenderWindow window(VideoMode({(unsigned int)width, (unsigned int)height}), "Crossy Road");
-    
+
+    // Game Objects & Managers
     vector<Lane> lanes;
     vector<Obstacle*> obstacles;
     WorldGenerator worldGen(width, height);
-    AudioManager audio; 
+    AudioManager audio;
 
     // Player Setup
     RectangleShape player({PLAYER_SIZE, PLAYER_SIZE});
-    player.setFillColor(Color::Blue);
-    player.setPosition(Vector2f((width / 2) - (PLAYER_SIZE / 2), (height - TILE) - 250.f));
+    player.setFillColor(Color::Green);
+    player.setPosition(sf::Vector2f((width / 2) - (PLAYER_SIZE / 2), (height - TILE) - 250.f));
 
+    // Camera & Timing
     Clock clock;
     View camera = window.getDefaultView();
-    float cameraSpeed = 15.f;
+    float cameraSpeed = 40.f;
     float cameraY = height / 2.f;
 
-    // Initial World Generation
-    for (int i = 0; i < 20; i++)
-        worldGen.update(height / 2.f - i * TILE, lanes, obstacles);
-
-    // ---------------------------------------------------------
-    // 2. UI & TEXT SETUP
-    // ---------------------------------------------------------
+    // --- UI & ASSETS ---
     Font font;
     if (!font.openFromFile("..\\assets\\fonts\\pixelpurl.ttf"))
-        return -1; 
-        
+        return -1;
+
+    // HUD Text (Score and High Score)
     Text scoreText(font);
     scoreText.setCharacterSize(50);
     scoreText.setFillColor(Color::White);
-    scoreText.setPosition(Vector2f(10.f, 10.f));
-        
+    scoreText.setPosition(sf::Vector2f(10.f, 10.f));
+
+    Text highScoreText(font);
+    highScoreText.setCharacterSize(32);
+    highScoreText.setFillColor(Color::Yellow);
+    highScoreText.setPosition(sf::Vector2f(10.f, 60.f));
+
+    // Score Tracking
     int score = 0;
     float highestY = player.getPosition().y;
+    const string SCORE_FILE = "highscore.txt";
+    int highScore = loadHighScore(SCORE_FILE);
 
     // Game States
-    enum class GameState { PLAYING, DEAD };
-    GameState state = GameState::PLAYING;
+    enum class GameState { MENU, PLAYING, DEAD };
+    GameState state = GameState::MENU;
 
-    // Death Screen UI
-    Text deathText(font);
-    deathText.setCharacterSize(48);
-    deathText.setFillColor(Color::Red);
-    deathText.setString("GAME OVER");
-    
-    Text restartText(font);
-    restartText.setCharacterSize(24);
-    restartText.setFillColor(Color::White);
-    restartText.setString("Press R to restart");
+    // Menu Background
+    Texture bgTexture;
+    if (!bgTexture.loadFromFile("..\\assets\\images\\bg.png"))
+        return -1;
 
-    // Start Background Music
+    Sprite bgSprite(bgTexture);
+    bgSprite.setScale(sf::Vector2f(
+        width  / (float)bgTexture.getSize().x,
+        height / (float)bgTexture.getSize().y
+    ));
+
+    // UI Prompts
+    Text promptText(font);
+    promptText.setCharacterSize(32);
+    promptText.setFillColor(sf::Color::White);
+    promptText.setString("Press ENTER to Play");
+    FloatRect tb = promptText.getGlobalBounds();
+    promptText.setPosition(sf::Vector2f(
+        width / 2.f - tb.size.x / 2.f,
+        height - 100.f
+    ));
+
+    // Audio Start
     audio.playMusic("..\\assets\\sounds\\bg_music.ogg");
 
-    // ---------------------------------------------------------
-    // 3. MAIN GAME LOOP
-    // ---------------------------------------------------------
+    // Pre-seed the world with 20 lanes
+    for (int i = 0; i < 20; i++)
+        worldGen.update(height / 2.f - i * TILE, lanes, obstacles);
+
+    // --- MAIN GAME LOOP ---
     while (window.isOpen()) {
         float dt = clock.restart().asSeconds();
 
-        // --- CAMERA LOGIC ---
-        if (state == GameState::PLAYING) {
-            cameraY -= cameraSpeed * dt;
-            float playerY = player.getPosition().y;
-            // Snap camera to player if they advance too quickly
-            if (playerY < cameraY - height / 4.f)
-                cameraY = playerY + height / 4.f;
-        }
-
-        camera.setCenter(Vector2f(width / 2.f, cameraY));
-        window.setView(camera);
-        worldGen.update(cameraY, lanes, obstacles);
-
-        // --- EVENT PROCESSING ---
+        // ─── EVENTS ───────────────────────────────────────
         while (const std::optional event = window.pollEvent()) {
-            if (event->is<Event::Closed>())
+            if (event->is<Event::Closed>()) {
                 window.close();
+            }
 
             if (const auto* keyEvent = event->getIf<Event::KeyPressed>()) {
-                
-                // Player Movement
+                // Restart logic for Menu or Death screens
+                if (state == GameState::MENU || state == GameState::DEAD) {
+                    if (keyEvent->code == Keyboard::Key::Enter) {
+                        state = GameState::PLAYING;
+                        score = 0;
+                        lanes.clear();
+                        
+                        // Clean up old obstacle pointers
+                        for (auto* o : obstacles) delete o;
+                        obstacles.clear();
+
+                        // Reset Player and Camera
+                        player.setPosition(sf::Vector2f(
+                            (width / 2) - (PLAYER_SIZE / 2), height - TILE - 250.f));
+                        cameraY = height / 2.f;
+                        highestY = player.getPosition().y;
+                        
+                        // Re-generate initial world
+                        worldGen = WorldGenerator(width, height);
+                        for (int i = 0; i < 20; i++)
+                            worldGen.update(height / 2.f - i * TILE, lanes, obstacles);
+                    }
+                }
+
+                // Gameplay Input
                 if (state == GameState::PLAYING) {
                     Vector2f pos = player.getPosition();
                     float topEdge = cameraY - height / 2.f;
@@ -118,7 +143,6 @@ int main() {
                             }
                             break;
                         case Keyboard::Key::Down:
-                            // Lower boundary removed: player can move off-camera to die
                             moveVec = {0.f, TILE};
                             if (!Collision::checkStaticBlocking(player, moveVec, obstacles)) {
                                 player.move(moveVec);
@@ -126,103 +150,143 @@ int main() {
                             }
                             break;
                         case Keyboard::Key::Left:
-                            if (pos.x - TILE >= 0) {
-                                moveVec = {-TILE, 0.f};
-                                if (!Collision::checkStaticBlocking(player, moveVec, obstacles)) {
-                                    player.move(moveVec);
-                                    moved = true;
-                                }
+                            moveVec = {-TILE, 0.f};
+                            if (!Collision::checkStaticBlocking(player, moveVec, obstacles)) {
+                                player.move(moveVec);
+                                moved = true;
                             }
                             break;
                         case Keyboard::Key::Right:
-                            if (pos.x + TILE + PLAYER_SIZE <= width) {
-                                moveVec = {TILE, 0.f};
-                                if (!Collision::checkStaticBlocking(player, moveVec, obstacles)) {
-                                    player.move(moveVec);
-                                    moved = true;
-                                }
+                            moveVec = {TILE, 0.f};
+                            if (!Collision::checkStaticBlocking(player, moveVec, obstacles)) {
+                                player.move(moveVec);
+                                moved = true;
                             }
                             break;
                         default: break;
                     }
-
-                    if (moved) audio.playSound("hop");
-                }
-
-                // Restart Logic
-                if (state == GameState::DEAD && keyEvent->code == Keyboard::Key::R) {
-                    state = GameState::PLAYING;
-                    score = 0;
-                    lanes.clear();
-                    for (auto* o : obstacles) delete o;
-                    obstacles.clear();
-                    player.setPosition(Vector2f((width / 2) - (PLAYER_SIZE / 2), (height - TILE) - 250.f));
-                    cameraY = height / 2.f;
-                    highestY = player.getPosition().y;
-                    worldGen = WorldGenerator(width, height);
-                    for (int i = 0; i < 20; i++)
-                        worldGen.update(height / 2.f - i * TILE, lanes, obstacles);
+                    if (moved)
+                        audio.playSound("hop");
                 }
             }
         }
 
-        // --- GAME LOGIC & UPDATES ---
+        // ─── UPDATE ───────────────────────────────────────
         if (state == GameState::PLAYING) {
-            // Scoring
+            // Constant Camera Movement
+            cameraY -= cameraSpeed * dt;
+            
+            // Camera follow: speed up if player is too far forward
+            float playerY = player.getPosition().y;
+            if (playerY < cameraY - height / 4.f)
+                cameraY = playerY + height / 4.f;
+
+            camera.setCenter(sf::Vector2f(width / 2.f, cameraY));
+            window.setView(camera);
+
+            // Generate new lanes based on camera progress
+            worldGen.update(cameraY, lanes, obstacles);
+
+            // Update all moving obstacles (Cars, Logs)
+            for (auto* obs : obstacles)
+                obs->update(dt);
+
+            // Log Platform Logic: Move player along with the log
+            Log* log = Collision::getLogUnderPlayer(player, obstacles);
+            if (log != nullptr)
+                player.move(sf::Vector2f(log->getSpeedX() * dt, 0.f));
+
+            // Scoring Logic: Increase if player moves to a new "highest" Y position
             float currentY = player.getPosition().y;
             if (currentY < highestY) {
                 score++;
                 highestY = currentY;
             }
 
-            // Update Obstacles
-            for (auto* obs : obstacles) obs->update(dt);
-
-            // Log Riding
-            Log* log = Collision::getLogUnderPlayer(player, obstacles);
-            if (log != nullptr) player.move(Vector2f(log->getSpeedX() * dt, 0.f));
-
-            // Death Checks (Vehicles, Water, or Falling off bottom of Camera)
+            // Death Checks (Vehicles, Water, or Falling off camera edges)
+            float cameraLeft   = 0.f;
+            float cameraRight  = (float)width;
             float bottomEdge = cameraY + height / 2.f;
-            if (player.getPosition().y > bottomEdge || 
-                Collision::checkVehicleHit(player, obstacles) || 
-                Collision::checkDrowning(player, lanes, obstacles)) {
-                
+
+            if (Collision::checkVehicleHit(player, obstacles) ||
+                Collision::checkDrowning(player, lanes, obstacles) ||
+                player.getPosition().y > bottomEdge ||
+                player.getPosition().x < cameraLeft   || 
+                player.getPosition().x + PLAYER_SIZE > cameraRight
+                ) {
+                // Handle High Score persistence
+                if (score > highScore) {
+                    highScore = score;
+                    saveHighScore(SCORE_FILE, highScore);
+                }
                 state = GameState::DEAD;
                 audio.playSound("death");
             }
+
+            scoreText.setString(to_string(score));
+            highScoreText.setString(to_string(highScore));
         }
 
-        // --- RENDERING ---
-        window.clear(Color::Green);
+        // ─── DRAW ─────────────────────────────────────────
+        window.clear(Color(34, 139, 34)); // Grass Green background
 
-        // Draw World Objects
-        for (auto& lane : lanes) lane.draw(window);
-        for (auto* obs : obstacles) obs->draw(window);
-        window.draw(player);
-
-        // Draw UI (Switch to Static/Default View so UI doesn't move with camera)
-        window.setView(window.getDefaultView());
-        scoreText.setString(to_string(score));
-        window.draw(scoreText);
-
-        if (state == GameState::DEAD) {
-            RectangleShape overlay(Vector2f((float)width, (float)height));
-            overlay.setFillColor(Color(0, 0, 0, 160));
-            window.draw(overlay);
-
-            // Center death UI
-            deathText.setPosition(Vector2f(width/2.f - deathText.getGlobalBounds().size.x/2.f, height/2.f - 60.f));
-            restartText.setPosition(Vector2f(width/2.f - restartText.getGlobalBounds().size.x/2.f, height/2.f + 10.f));
+        if (state == GameState::PLAYING) {
+            window.setView(camera);
             
-            window.draw(deathText);
-            window.draw(restartText);
+            // Draw game world
+            for (auto& lane : lanes) lane.draw(window);
+            for (auto* obs : obstacles) obs->draw(window);
+            window.draw(player);
+
+            // Switch to default view for static UI overlay
+            window.setView(window.getDefaultView());
+            window.draw(scoreText);
+            window.draw(highScoreText);
+        }
+        else {
+            // Draw Menu/Death Background
+            window.setView(window.getDefaultView());
+            window.draw(bgSprite);
+
+            if (state == GameState::DEAD) {
+                // Game Over Title
+                Text deathText(font);
+                deathText.setCharacterSize(70);
+                deathText.setFillColor(Color::Red);
+                deathText.setString("GAME OVER");
+                FloatRect db = deathText.getGlobalBounds();
+                deathText.setPosition(sf::Vector2f(
+                    width / 2.f - db.size.x / 2.f,
+                    height / 2.f - 80.f
+                ));
+                window.draw(deathText);
+
+                // Final Score display
+                Text finalScore(font);
+                finalScore.setCharacterSize(60);
+                finalScore.setFillColor(Color(21, 57, 108));
+                finalScore.setString(to_string(score));
+                FloatRect fb = finalScore.getGlobalBounds();
+                finalScore.setPosition(sf::Vector2f(
+                    width / 2.f - fb.size.x / 2.f,
+                    height / 2.f - 20.f
+                ));
+                window.draw(finalScore);
+
+                highScoreText.setString("Best: " + to_string(highScore));
+                highScoreText.setPosition(sf::Vector2f(10.f, 60.f));
+                window.draw(highScoreText);
+            }
+
+            window.draw(promptText);
         }
 
         window.display();
     }
 
-    // Cleanup
-    for (auto* obs : obstacles) delete obs;
+    // Cleanup allocated memory
+    for (auto* obs : obstacles)
+        delete obs;
+
     return 0;
 }
