@@ -1,29 +1,34 @@
-#ifndef AUDIO_H
-#define AUDIO_H
-
-#include <SFML/Audio.hpp>
-#include <map>
-#include <string>
-#include <optional> // Add this
+#include "audio.h"
+#include <iostream>
 
 using namespace std;
 using namespace sf;
 
-class AudioManager {
-public:
-    AudioManager();
-    
-    void playSound(const string& name);
-    void playMusic(const string& path);
+AudioManager::AudioManager() {
+    loadBuffer("hop", "../assets/sounds/hop.wav");
+    loadBuffer("death", "../assets/sounds/death.wav");
+}
 
-private:
-    map<string, SoundBuffer> buffers;
-    
-    // SFML 3 Fix: Use optional so it doesn't need an immediate buffer
-    optional<Sound> sfxPlayer; 
-    Music bgMusic;
+void AudioManager::loadBuffer(const string& name, const string& path) {
+    SoundBuffer buffer;
+    if (buffer.loadFromFile(path))
+        buffers.insert({name, move(buffer)});
+}
 
-    void loadBuffer(const string& name, const string& path);
-};
+void AudioManager::playSound(const string& name) {
+    auto it = buffers.find(name);
+    if (it != buffers.end()) {
+        // SFML 3 Fix: Create the Sound object directly with the buffer
+        sfxPlayer.emplace(it->second); 
+        sfxPlayer->play();
+    }
+}
 
-#endif
+void AudioManager::playMusic(const string& path) {
+    // SFML 3: openFromFile returns a bool/optional
+    if (bgMusic.openFromFile(path)) {
+        bgMusic.setLooping(true); 
+        bgMusic.setVolume(20.f);
+        bgMusic.play();
+    }
+}
