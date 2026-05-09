@@ -1,14 +1,17 @@
 #include <algorithm>  
-#include "worldgenerator.h"
 #include <random>
+#include "worldgenerator.h"
+
 using namespace std;
+
+// --- CONSTRUCTOR & DESTRUCTOR ---
 
 WorldGenerator::WorldGenerator(float windowWidth, float windowHeight)
     : windowWidth(windowWidth), windowHeight(windowHeight),
       highestLaneY(windowHeight), lanesSinceLastSafe(0)
 {
     rng.seed(random_device{}());
-    registerPrototypes();   // ← register on startup
+    registerPrototypes();
 }
 
 WorldGenerator::~WorldGenerator() {
@@ -16,9 +19,13 @@ WorldGenerator::~WorldGenerator() {
         delete pair.second;
 }
 
+// --- PROTOTYPE MANAGEMENT ---
+
 void WorldGenerator::registerPrototypes() {
-    // register one master copy of each type at dummy position (0,0)
-    // position gets overwritten by spawnFromPrototype()
+    for (auto& pair : prototypes)
+        delete pair.second;
+    prototypes.clear();
+
     prototypes["bike"]     = new Vehicle(0, 0, 100.f, 1, VehicleType::BIKE,     windowWidth);
     prototypes["rickshaw"] = new Vehicle(0, 0, 80.f,  1, VehicleType::RICKSHAW, windowWidth);
     prototypes["dumper"]   = new Vehicle(0, 0, 60.f,  1, VehicleType::DUMPER,   windowWidth);
@@ -28,19 +35,19 @@ void WorldGenerator::registerPrototypes() {
 }
 
 Obstacle* WorldGenerator::spawnFromPrototype(const string& key, float x, float y) {
-    Obstacle* clone = prototypes[key]->clone();  // copy the prototype
-    clone->setPosition(x, y);                    // place it in the world
+    Obstacle* clone = prototypes[key]->clone();
+    clone->setPosition(x, y); 
     return clone;
 }
 
+// --- CORE LOGIC ---
+
 void WorldGenerator::update(float cameraY, vector<Lane>& lanes, vector<Obstacle*>& obstacles) {
-    // spawn new lanes when camera gets close to the top
     float spawnThreshold = cameraY - windowHeight / 2.f - TILE * 2;
 
     while (highestLaneY > spawnThreshold)
         spawnLane(lanes, obstacles);
 
-    // remove lanes and obstacles that are far below camera
     float despawnY = cameraY + windowHeight;
 
     lanes.erase(remove_if(lanes.begin(), lanes.end(),
@@ -75,7 +82,6 @@ void WorldGenerator::spawnLane(vector<Lane>& lanes, vector<Obstacle*>& obstacles
 }
 
 Lane::Type WorldGenerator::pickLaneType() {
-    // force a safe lane every 4 rows max
     if (lanesSinceLastSafe >= 4)
         return Lane::SAFE;
 
@@ -88,6 +94,8 @@ Lane::Type WorldGenerator::pickLaneType() {
     }
 }
 
+// --- SPAWNING HELPERS ---
+
 void WorldGenerator::spawnStaticObstacles(vector<Obstacle*>& obstacles, float laneY) {
     uniform_int_distribution<int> countDist(1, 2);
     uniform_real_distribution<float> xDist(0.f, windowWidth - TILE);
@@ -97,7 +105,7 @@ void WorldGenerator::spawnStaticObstacles(vector<Obstacle*>& obstacles, float la
     for (int i = 0; i < count; i++) {
         float x = round(xDist(rng) / TILE) * TILE;
         string key = typeDist(rng) == 0 ? "tree" : "rock";
-        obstacles.push_back(spawnFromPrototype(key, x, laneY));  // ← no more new Tree/Rock
+        obstacles.push_back(spawnFromPrototype(key, x, laneY));
     }
 }
 
@@ -106,12 +114,11 @@ void WorldGenerator::spawnVehicles(vector<Obstacle*>& obstacles, float laneY) {
     uniform_int_distribution<int> countDist(1, 2);
     uniform_int_distribution<int> typeDist(0, 2);
 
-    // all vehicles on one lane share direction
     int direction = dirDist(rng) == 0 ? 1 : -1;
     int count = countDist(rng);
 
     string types[] = {"bike", "rickshaw", "dumper"};
-    string key = types[typeDist(rng)];  // one vehicle type per lane
+    string key = types[typeDist(rng)]; 
 
     float spacing = windowWidth / count;
     if (spacing < TILE * 3.5f) { count = 1; spacing = windowWidth; }
@@ -122,16 +129,15 @@ void WorldGenerator::spawnVehicles(vector<Obstacle*>& obstacles, float laneY) {
             : windowWidth + i * spacing;
 
         Obstacle* v = spawnFromPrototype(key, x, laneY);
-        // fix direction since prototype always stores direction=1
         static_cast<Vehicle*>(v)->setDirection(direction);
         obstacles.push_back(v);
     }
 }
 
-void WorldGenerator::spawnLogs(std::vector<Obstacle*>& obstacles, float laneY) {
-    std::uniform_int_distribution<int> dirDist(0, 1);
-    std::uniform_real_distribution<float> speedDist(50.f, 100.f);
-    std::uniform_int_distribution<int> countDist(1, 2);
+void WorldGenerator::spawnLogs(vector<Obstacle*>& obstacles, float laneY) {
+    uniform_int_distribution<int> dirDist(0, 1);
+    uniform_real_distribution<float> speedDist(50.f, 100.f);
+    uniform_int_distribution<int> countDist(1, 2);
 
     int direction = dirDist(rng) == 0 ? 1 : -1;
     float speed = speedDist(rng);
@@ -147,7 +153,7 @@ void WorldGenerator::spawnLogs(std::vector<Obstacle*>& obstacles, float laneY) {
 
         Obstacle* log = spawnFromPrototype("log", x, laneY);
         static_cast<Log*>(log)->setDirection(direction);
-        static_cast<Log*>(log)->setSpeed(speed);   // add setSpeed to obstacle.h
+        static_cast<Log*>(log)->setSpeed(speed); 
         obstacles.push_back(log);
     }
 }
