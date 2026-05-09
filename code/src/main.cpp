@@ -25,8 +25,11 @@ int main() {
     AudioManager audio;
 
     // Player Setup
-    RectangleShape player({PLAYER_SIZE, PLAYER_SIZE});
-    player.setFillColor(Color::Green);
+    Texture playerTexture;
+    playerTexture.loadFromFile("..\\assets\\images\\player.png");
+    Sprite player(playerTexture);
+    Vector2u ps = playerTexture.getSize();
+    player.setScale({PLAYER_SIZE / (float)ps.x, PLAYER_SIZE / (float)ps.y});
     player.setPosition(sf::Vector2f((width / 2) - (PLAYER_SIZE / 2), (height - TILE) - 250.f));
 
     // Camera & Timing
@@ -136,7 +139,7 @@ int main() {
                         case Keyboard::Key::Up:
                             if (pos.y - TILE >= topEdge) {
                                 moveVec = {0.f, -TILE};
-                                if (!Collision::checkStaticBlocking(player, moveVec, obstacles)) {
+                                if (!Collision::checkStaticBlocking(player.getGlobalBounds(), moveVec, obstacles)) {
                                     player.move(moveVec);
                                     moved = true;
                                 }
@@ -144,21 +147,21 @@ int main() {
                             break;
                         case Keyboard::Key::Down:
                             moveVec = {0.f, TILE};
-                            if (!Collision::checkStaticBlocking(player, moveVec, obstacles)) {
+                            if (!Collision::checkStaticBlocking(player.getGlobalBounds(), moveVec, obstacles)) {
                                 player.move(moveVec);
                                 moved = true;
                             }
                             break;
                         case Keyboard::Key::Left:
                             moveVec = {-TILE, 0.f};
-                            if (!Collision::checkStaticBlocking(player, moveVec, obstacles)) {
+                            if (!Collision::checkStaticBlocking(player.getGlobalBounds(), moveVec, obstacles)) {
                                 player.move(moveVec);
                                 moved = true;
                             }
                             break;
                         case Keyboard::Key::Right:
                             moveVec = {TILE, 0.f};
-                            if (!Collision::checkStaticBlocking(player, moveVec, obstacles)) {
+                            if (!Collision::checkStaticBlocking(player.getGlobalBounds(), moveVec, obstacles)) {
                                 player.move(moveVec);
                                 moved = true;
                             }
@@ -192,7 +195,7 @@ int main() {
                 obs->update(dt);
 
             // Log Platform Logic: Move player along with the log
-            Log* log = Collision::getLogUnderPlayer(player, obstacles);
+            Log* log = Collision::getLogUnderPlayer(player.getGlobalBounds(), obstacles);
             if (log != nullptr)
                 player.move(sf::Vector2f(log->getSpeedX() * dt, 0.f));
 
@@ -208,8 +211,8 @@ int main() {
             float cameraRight  = (float)width;
             float bottomEdge = cameraY + height / 2.f;
 
-            if (Collision::checkVehicleHit(player, obstacles) ||
-                Collision::checkDrowning(player, lanes, obstacles) ||
+            if (Collision::checkVehicleHit(player.getGlobalBounds(), obstacles) ||
+                Collision::checkDrowning(player.getGlobalBounds(), lanes, obstacles) ||
                 player.getPosition().y > bottomEdge ||
                 player.getPosition().x < cameraLeft   || 
                 player.getPosition().x + PLAYER_SIZE > cameraRight
