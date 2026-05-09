@@ -158,12 +158,37 @@ int main() {
                                 player.move(moveVec);
                                 moved = true;
                             }
+                            else {
+                                // try smaller step to fill the gap
+                                float gap = pos.x - player.getGlobalBounds().position.x;
+                                for (float step = TILE - 1; step >= 5.f; step -= 5.f) {
+                                    sf::Vector2f small(-step, 0.f);
+                                    if (!Collision::checkStaticBlocking(player.getGlobalBounds(), small, obstacles)) {
+                                        player.move(small);
+                                        moved = true;
+                                        player.setPosition(player.getPosition());
+                                        break;
+                                    }
+                                }
+                            }
                             break;
                         case Keyboard::Key::Right:
                             moveVec = {TILE, 0.f};
                             if (!Collision::checkStaticBlocking(player.getGlobalBounds(), moveVec, obstacles)) {
                                 player.move(moveVec);
                                 moved = true;
+                            }
+                            else {
+                                // try smaller step to fill the gap
+                                for (float step = TILE - 1; step >= 5.f; step -= 5.f) {
+                                    sf::Vector2f small(step, 0.f);
+                                    if (!Collision::checkStaticBlocking(player.getGlobalBounds(), small, obstacles)) {
+                                        player.move(small);
+                                        moved = true;
+                                        player.setPosition(player.getPosition());
+                                        break;
+                                    }
+                                }
                             }
                             break;
                         default: break;
