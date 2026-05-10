@@ -3,7 +3,7 @@
 #include "constants.h"
 #include <string>
 
-enum class VehicleType { BIKE, RICKSHAW, DUMPER };
+enum class VehicleType { BIKE, CAR, DUMPER };
 
 class Vehicle : public Obstacle {
 public:
