@@ -133,6 +133,12 @@ void WorldGenerator::spawnVehicles(vector<Obstacle*>& obstacles, float laneY) {
         obstacles.push_back(v);
     }
 }
+void WorldGenerator::reinitialize() {
+        highestLaneY = windowHeight;
+        lanesSinceLastSafe = 0;
+        rng.seed(std::random_device{}());
+        registerPrototypes();
+    }
 
 void WorldGenerator::spawnLogs(vector<Obstacle*>& obstacles, float laneY) {
     uniform_int_distribution<int> dirDist(0, 1);
