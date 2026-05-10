@@ -3,8 +3,8 @@
 
 sf::Vector2f Vehicle::sizeFor(VehicleType t) {
     switch (t) {
-        case VehicleType::BIKE:     return {TILE * 1.5f,  TILE * 0.7f};
-        case VehicleType::RICKSHAW: return {TILE * 1.5f,  TILE * 0.7f};
+        case VehicleType::BIKE:     return {TILE * 0.8f,  TILE * 0.5f};
+        case VehicleType::CAR:      return {TILE * 1.5f,  TILE * 0.7f};
         case VehicleType::DUMPER:   return {TILE * 2.5f,  TILE * 0.85f};
         default:                    return {TILE, TILE};
     }
@@ -13,7 +13,7 @@ sf::Vector2f Vehicle::sizeFor(VehicleType t) {
 std::string Vehicle::textureFor(VehicleType t) {
     switch (t) {
         case VehicleType::BIKE:     return "..\\assets\\images\\bike.png";
-        case VehicleType::RICKSHAW: return "..\\assets\\images\\rickshaw.png";
+        case VehicleType::CAR:      return "..\\assets\\images\\car.png";
         case VehicleType::DUMPER:   return "..\\assets\\images\\dumper.png";
         default:                    return "..\\assets\\images\\bike.png";
     }
