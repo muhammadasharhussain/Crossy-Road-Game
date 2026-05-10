@@ -27,7 +27,7 @@ void WorldGenerator::registerPrototypes() {
     prototypes.clear();
 
     prototypes["bike"]     = new Vehicle(0, 0, 100.f, 1, VehicleType::BIKE,     windowWidth);
-    prototypes["rickshaw"] = new Vehicle(0, 0, 80.f,  1, VehicleType::RICKSHAW, windowWidth);
+    prototypes["car"] = new Vehicle(0, 0, 80.f,  1, VehicleType::CAR,      windowWidth);
     prototypes["dumper"]   = new Vehicle(0, 0, 60.f,  1, VehicleType::DUMPER,   windowWidth);
     prototypes["tree"]     = new Tree(0, 0);
     prototypes["rock"]     = new Rock(0, 0);
@@ -117,7 +117,7 @@ void WorldGenerator::spawnVehicles(vector<Obstacle*>& obstacles, float laneY) {
     int direction = dirDist(rng) == 0 ? 1 : -1;
     int count = countDist(rng);
 
-    string types[] = {"bike", "rickshaw", "dumper"};
+    string types[] = {"bike", "car", "dumper"};
     string key = types[typeDist(rng)]; 
 
     float spacing = windowWidth / count;
