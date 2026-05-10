@@ -40,7 +40,7 @@ void Vehicle::draw(RenderWindow& window) {
 }
 
 Log::Log(float x, float y, float speed, int direction, float windowWidth)
-    : Obstacle(x, y, TILE * 2.5f, TILE * 0.7f,
+    : Obstacle(x, y, TILE * 2.5f, TILE * 0.85f,
         "..\\assets\\images\\log.png", speed, direction),
       windowWidth(windowWidth) {
     objWidth = TILE * 2.5f;
