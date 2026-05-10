@@ -122,7 +122,7 @@ int main() {
                         highestY = player.getPosition().y;
                         
                         // Re-generate initial world
-                        worldGen = WorldGenerator(width, height);
+                        worldGen.reinitialize();
                         for (int i = 0; i < 20; i++)
                             worldGen.update(height / 2.f - i * TILE, lanes, obstacles);
                     }
