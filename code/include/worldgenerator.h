@@ -13,6 +13,7 @@ class WorldGenerator {
 public:
     WorldGenerator(float windowWidth, float windowHeight);
     ~WorldGenerator();  // ← needed to delete prototypes
+    void reinitialize();
 
     void update(float cameraY, std::vector<Lane>& lanes, std::vector<Obstacle*>& obstacles);
     // worldgenerator.h — add this
